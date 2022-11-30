@@ -27,6 +27,18 @@ x-environment:
   RABBITMQ_PASS: taiga
   # Telemetry settings
   ENABLE_TELEMETRY: "True"
+  CELERY_BROKER_URL: "amqp://taiga:taiga@taiga-async-rabbitmq:5672/taiga"
+  EVENTS_PUSH_BACKEND: "taiga.events.backends.rabbitmq.EventsPushBackend"
+  EVENTS_PUSH_BACKEND_URL: "amqp://taiga:taiga@taiga-events-rabbitmq:5672/taiga"
+
+  # OpenId Settings
+  PUBLIC_REGISTER_ENABLED: "True"
+  ENABLE_OPENID: "True"
+  OPENID_USER_URL : "http://100.115.92.195:8080/auth/realms/demo/protocol/openid-connect/userinfo"
+  OPENID_TOKEN_URL : "http://100.115.92.195:8080/auth/realms/demo/protocol/openid-connect/token"
+  OPENID_CLIENT_ID : "taiga"
+  OPENID_CLIENT_SECRET : "cpsPih3y0vNA5oBXl73D2i4wH5cf6RtB"
+  OPENID_SCOPE: "openid email profile"
 
 x-volumes:
   &default-back-volumes
@@ -48,7 +60,7 @@ services:
       - taiga
 
   taiga-back:
-    image: taigaio/taiga-back:latest
+    image: robrotheram/taiga-back-openid
     environment: *default-back-environment
     volumes: *default-back-volumes
     networks:
@@ -57,6 +69,8 @@ services:
       - taiga-db
       - taiga-events-rabbitmq
       - taiga-async-rabbitmq
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   taiga-async:
     image: taigaio/taiga-back:latest
@@ -69,6 +83,8 @@ services:
       - taiga-db
       - taiga-back
       - taiga-async-rabbitmq
+    extra_hosts:
+      - "host.docker.internal:host-gateway"
 
   taiga-async-rabbitmq:
     image: rabbitmq:3.8-management-alpine
@@ -83,11 +99,15 @@ services:
       - taiga
 
   taiga-front:
-    image: taigaio/taiga-front:latest
+    image: robrotheram/taiga-front-openid
     environment:
       TAIGA_URL: "http://localhost:9000"
       TAIGA_WEBSOCKETS_URL: "ws://localhost:9000"
       TAIGA_SUBPATH: "" # "" or "/subpath"
+      ENABLE_OPENID: "true"
+      OPENID_URL: "http://100.115.92.195:8080/auth/realms/demo/protocol/openid-connect/auth"
+      OPENID_CLIENT_ID: "taiga"
+      OPENID_NAME: "keycloak"
     networks:
       - taiga
     # volumes:
